@@ -1,0 +1,15 @@
+# Build environment for the Linux .deb packages.
+#
+# Ubuntu 22.04 (glibc 2.35) on purpose: the oldest supported base that still
+# covers our targets, so binaries built here run on everything newer —
+# Raspberry Pi OS bookworm/trixie, Debian 12+, Ubuntu 22.04+ and NVIDIA DGX
+# OS (Ubuntu-based, aarch64 on Grace).
+FROM ubuntu:22.04
+
+ARG DEBIAN_FRONTEND=noninteractive
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      build-essential cmake pkg-config dpkg-dev file libjack-jackd2-dev \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /src
