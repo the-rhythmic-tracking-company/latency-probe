@@ -20,9 +20,17 @@ struct MeasurementConfig {
 
 struct ProbeResult {
     bool detected = false;
+    /// The app returned digital silence for this probe's whole search window
+    /// (e.g. the musician's own fader is down), so there was nothing to
+    /// search; snrDb is meaningless then.
+    bool silent = false;
     double lagMs = 0.0;
     double snrDb = 0.0;
 };
+
+/// Below this RMS a returned window counts as silence. Far under any real
+/// interface or codec noise floor, so only true digital silence qualifies.
+constexpr double kSilenceDbfs = -100.0;
 
 struct MeasurementResult {
     std::vector<ProbeResult> probes;

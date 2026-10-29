@@ -76,6 +76,17 @@ TEST("Given an app that never returns the signal, when measuring, then nothing i
     const MeasurementResult r = runThroughDelay(m, 1000, 0.0f, 0.01f);
     CHECK(m.done());
     CHECK(r.validCount == 0);
+    for (const auto& p : r.probes) CHECK(!p.silent);
+}
+
+TEST("Given an app that returns digital silence, when measuring, then every probe is marked silent")
+{
+    Measurement m;
+    CHECK(m.arm(MeasurementConfig{}).empty());
+    const MeasurementResult r = runThroughDelay(m, 1000, 0.0f, 0.0f);
+    CHECK(r.validCount == 0);
+    CHECK(r.probes.size() == 5);
+    for (const auto& p : r.probes) CHECK(p.silent && !p.detected);
 }
 
 TEST("Given a probe interval shorter than the search window, when arming, then it is rejected")

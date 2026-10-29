@@ -107,10 +107,20 @@ MeasurementResult Measurement::analyze() const
     MeasurementResult result;
     std::vector<double> lags;
     const std::size_t windowLen = maxLagFrames_ + probe_.size();
+    const double silenceRms = std::pow(10.0, kSilenceDbfs / 20.0);
     for (int k = 0; k < config_.probeCount; ++k) {
-        const Detection d = detect(captured_.data() + emissionOffset(k), windowLen,
-                                   probe_, maxLagFrames_, config_.minSnrDb);
+        const float* window = captured_.data() + emissionOffset(k);
+        double sumSq = 0.0;
+        for (std::size_t i = 0; i < windowLen; ++i) sumSq += static_cast<double>(window[i]) * window[i];
+
         ProbeResult p;
+        p.silent = std::sqrt(sumSq / static_cast<double>(windowLen)) < silenceRms;
+        if (p.silent) {
+            result.probes.push_back(p);
+            continue;
+        }
+
+        const Detection d = detect(window, windowLen, probe_, maxLagFrames_, config_.minSnrDb);
         p.detected = d.found;
         p.snrDb = d.snrDb;
         p.lagMs = d.lagSamples * 1000.0 / config_.sampleRate;

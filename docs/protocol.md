@@ -34,7 +34,7 @@ reject a schema it doesn't know rather than guess.
   "deviceInputMs": 2.667,
   "deviceOutputMs": 5.333,
   "totalRoundTripMs": 50.500,
-  "probes": [ { "detected": true, "lagMs": 42.500, "snrDb": 38.1 } ]
+  "probes": [ { "detected": true, "silent": false, "lagMs": 42.500, "snrDb": 38.1 } ]
 }
 ```
 
@@ -50,18 +50,18 @@ The bridge decides how to map this onto SyncTrack's offset; for
 `latencySource: 'loopback'` the natural one-way estimate is
 `totalRoundTripMs / 2`, mirroring the existing `rtt/2` path.
 
-## `measure` — probe not detected (exit 2)
+## `measure` — probe not found (exit 2)
 
-Same fields as success minus the latency figures, plus:
+Same fields as success minus the latency figures, with one of two `error`
+codes so the caller can tell the musician what to check:
 
-```json
-{ "schema": 1, "ok": false, "error": "not-detected",
-  "message": "No probe returned; is the app sending your own signal back to you?", ... }
-```
+| `error` | What came back | Usual cause |
+|---|---|---|
+| `silence-returned` | Digital silence (below −100 dBFS RMS) for every probe | The musician's own signal isn't in their mix: own fader down, self-monitor muted, or a JackTrip hub patched without loopback (needs `-p 1` or `-p 4`) |
+| `not-detected` | Audio, but no probe in it | A noise gate cutting the quiet probe, or a peer-to-peer app (SonoBus, JackTrip peer mode) that doesn't send your own signal back |
 
-Common causes: a peer-to-peer app (SonoBus, JackTrip peer mode) that doesn't
-send your own signal back, a muted self-monitor, a noise gate, or a JackTrip
-hub patched without loopback (needs `-p 1` or `-p 4`).
+Each entry in `probes` carries `"silent": true|false`; `snrDb` is `null` for
+a silent probe, since there was nothing to search.
 
 ## Errors
 
@@ -73,7 +73,7 @@ hub patched without loopback (needs `-p 1` or `-p 4`).
 |---|---|---|
 | 0 | — | Success |
 | 1 | `usage` | Bad arguments or measurement config |
-| 2 | `not-detected` | Measurement ran; no probe came back (see above) |
+| 2 | `silence-returned` / `not-detected` | Measurement ran; no probe came back (see above) |
 | 3 | `jack-unavailable` | No JACK / PipeWire-JACK server, or it shut down mid-run |
 | 4 | `target-not-found` | No matching app client; `message` lists the clients present |
 | 5 | `target-ambiguous` | Several known apps running; pass `--target` |

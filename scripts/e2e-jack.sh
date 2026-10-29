@@ -65,7 +65,7 @@ check "absurd probe level -> usage error" 1 "$rc" "$json" '"error":"usage"'
 
 "$fake" JackTrip mute & sleep 0.5
 json=$("$probe" measure --target JackTrip --count 2); rc=$?
-check "app that never returns audio -> not-detected" 2 "$rc" "$json" '"error":"not-detected"'
+check "app that returns silence -> silence-returned" 2 "$rc" "$json" '"error":"silence-returned"'
 set -e
 
 kill "$jackd_pid"

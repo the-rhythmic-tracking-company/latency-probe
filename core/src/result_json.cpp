@@ -1,5 +1,6 @@
 #include "latency_probe/result_json.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <sstream>
@@ -52,11 +53,16 @@ std::string measurementJson(const ReportContext& ctx, int requestedProbes,
                             const MeasurementResult& result)
 {
     const bool ok = result.validCount > 0;
+    const bool allSilent = !result.probes.empty()
+        && std::all_of(result.probes.begin(), result.probes.end(), [](const ProbeResult& p) { return p.silent; });
     std::ostringstream o;
     o << "{\"schema\":" << kSchemaVersion << ",\"ok\":" << (ok ? "true" : "false");
-    if (!ok) {
+    if (!ok && allSilent) {
+        o << ",\"error\":\"silence-returned\""
+          << ",\"message\":" << str("The app sent back silence: your own signal isn't in your mix. Check your own fader or self-monitoring in the app.");
+    } else if (!ok) {
         o << ",\"error\":\"not-detected\""
-          << ",\"message\":" << str("No probe returned; is the app sending your own signal back to you?");
+          << ",\"message\":" << str("Audio came back but the probe wasn't in it. Check for a noise gate, or a peer-to-peer app that doesn't send your own signal back.");
     }
     o << ",\"method\":\"loopback\""
       << ",\"backend\":" << str(ctx.backend)
@@ -77,8 +83,9 @@ std::string measurementJson(const ReportContext& ctx, int requestedProbes,
         const ProbeResult& p = result.probes[i];
         if (i) o << ",";
         o << "{\"detected\":" << (p.detected ? "true" : "false")
+          << ",\"silent\":" << (p.silent ? "true" : "false")
           << ",\"lagMs\":" << (p.detected ? num(p.lagMs) : "null")
-          << ",\"snrDb\":" << num(p.snrDb, 1) << "}";
+          << ",\"snrDb\":" << (p.silent ? "null" : num(p.snrDb, 1)) << "}";
     }
     o << "]}";
     return o.str();

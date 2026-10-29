@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 project(latency-probe
-  VERSION 0.1.0
+  VERSION 0.1.1
   DESCRIPTION "Audio-loopback latency probe for SyncTrack Stage Bridge"
   LANGUAGES CXX)
 

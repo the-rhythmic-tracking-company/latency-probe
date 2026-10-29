@@ -31,23 +31,36 @@ TEST("Given a successful measurement, when reporting, then totals include device
     MeasurementResult r;
     r.validCount = 1;
     r.medianMs = 40.0;
-    r.probes.push_back({true, 40.0, 30.0});
-    r.probes.push_back({false, 0.0, 9.0});
+    r.probes.push_back({true, false, 40.0, 30.0});
+    r.probes.push_back({false, false, 0.0, 9.0});
 
     const std::string json = measurementJson(ctx, 2, r);
     CHECK(contains(json, "\"schema\":1,\"ok\":true"));
     CHECK(contains(json, "\"appRoundTripMs\":40.000"));
     CHECK(contains(json, "\"totalRoundTripMs\":45.500"));
-    CHECK(contains(json, "{\"detected\":false,\"lagMs\":null,\"snrDb\":9.0}"));
+    CHECK(contains(json, "{\"detected\":false,\"silent\":false,\"lagMs\":null,\"snrDb\":9.0}"));
 }
 
-TEST("Given no detections, when reporting, then ok is false with error not-detected")
+TEST("Given audio but no detections, when reporting, then ok is false with error not-detected")
 {
     ReportContext ctx;
     MeasurementResult r;
-    const std::string json = measurementJson(ctx, 5, r);
+    r.probes.push_back({false, false, 0.0, 9.0});
+    r.probes.push_back({false, true, 0.0, 0.0});
+    const std::string json = measurementJson(ctx, 2, r);
     CHECK(contains(json, "\"ok\":false,\"error\":\"not-detected\""));
     CHECK(!contains(json, "totalRoundTripMs"));
+}
+
+TEST("Given only silence returned, when reporting, then error is silence-returned and snrDb is null")
+{
+    ReportContext ctx;
+    MeasurementResult r;
+    r.probes.push_back({false, true, 0.0, 0.0});
+    r.probes.push_back({false, true, 0.0, 0.0});
+    const std::string json = measurementJson(ctx, 2, r);
+    CHECK(contains(json, "\"ok\":false,\"error\":\"silence-returned\""));
+    CHECK(contains(json, "{\"detected\":false,\"silent\":true,\"lagMs\":null,\"snrDb\":null}"));
 }
 
 TEST("Given an error, when reporting, then code and message are present")
