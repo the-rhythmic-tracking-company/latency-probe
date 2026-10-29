@@ -54,23 +54,65 @@ On PipeWire systems, run it from a session where JACK clients already work
 
 ## Building
 
-Linux packages are built in Docker for both architectures; no local toolchain
-is needed:
+Linux packages are built in Docker for both architectures; the only
+prerequisite is Docker (Docker Desktop on Windows/macOS, which also provides
+the QEMU emulation used for arm64 on x86 hosts). Run everything from the repo
+root.
+
+### With the build script (Linux, macOS, Git Bash on Windows)
 
 ```
 scripts/build-linux.sh            # amd64 + arm64 → build/linux-<arch>/latency-probe_*.deb
-scripts/build-linux.sh arm64      # one architecture (emulated on x86 hosts)
+scripts/build-linux.sh amd64      # one architecture (arm64 is emulated on x86 hosts)
 ```
 
-End-to-end test against a real `jackd` (dummy driver) and a fake app with a
-known delay:
+For each architecture the script:
+
+1. builds the `latency-probe-build:<arch>` image from `docker/Dockerfile.linux`
+   (Ubuntu 22.04 + toolchain + `libjack-jackd2-dev`; cached after the first run),
+2. configures and compiles into `build/linux-<arch>`,
+3. runs the unit tests (`ctest`), and
+4. packages the `.deb` (`cpack`).
+
+From PowerShell, call Git Bash explicitly — a bare `bash` may resolve to WSL,
+where the script's Windows path handling doesn't apply:
 
 ```
+& "C:\Program Files\Git\bin\bash.exe" scripts/build-linux.sh amd64
+```
+
+### Without the script (PowerShell)
+
+The same steps by hand; for arm64 replace every `amd64`:
+
+```
+docker build --platform linux/amd64 -t latency-probe-build:amd64 -f docker/Dockerfile.linux docker
+docker run --rm --platform linux/amd64 -v "${PWD}:/src" -w /src latency-probe-build:amd64 bash -euc 'cmake -S . -B build/linux-amd64 -DCMAKE_BUILD_TYPE=Release && cmake --build build/linux-amd64 -j$(nproc) && cd build/linux-amd64 && ctest --output-on-failure && cpack -G DEB'
+```
+
+Keep the single quotes so PowerShell doesn't expand `$(nproc)` itself.
+
+### End-to-end test
+
+Runs a real `jackd` (dummy driver) and a fake app with a known delay against
+the built binaries. Needs the amd64 image and build from above:
+
+```
+# Linux / macOS
 docker run --rm --shm-size=256m -v "$PWD:/src" -w /src latency-probe-build:amd64 \
   bash scripts/e2e-jack.sh build/linux-amd64
+
+# Git Bash on Windows (stops MSYS rewriting /src and gives Docker a Windows path)
+MSYS_NO_PATHCONV=1 docker run --rm --shm-size=256m -v "$(pwd -W):/src" -w /src \
+  latency-probe-build:amd64 bash scripts/e2e-jack.sh build/linux-amd64
+
+# PowerShell
+docker run --rm --shm-size=256m -v "${PWD}:/src" -w /src latency-probe-build:amd64 bash scripts/e2e-jack.sh build/linux-amd64
 ```
 
-Native build (needs CMake ≥ 3.16, a C++17 compiler, and `libjack-jackd2-dev`
+### Native build
+
+Needs CMake ≥ 3.16, a C++17 compiler, and `libjack-jackd2-dev`
 for the JACK backend; without it only the core and tests are built):
 
 ```
