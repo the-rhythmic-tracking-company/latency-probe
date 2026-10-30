@@ -70,13 +70,22 @@ jobs:
           path: dist
           merge-multiple: true
 
+      # Each artifact keeps its build/<dir>/ subfolder (upload-artifact roots
+      # multiple paths at their common ancestor), so flatten before release.
+      - name: Collect packages
+        run: |
+          mkdir -p release
+          find dist -type f \( -name '*.deb' -o -name '*.rpm' \) -exec mv -t release/ {} +
+          ls -l release
+          test "$(ls release | wc -l)" -eq 4
+
       - name: Checksums
-        run: cd dist && sha256sum *.deb *.rpm > SHA256SUMS && cat SHA256SUMS
+        run: cd release && sha256sum *.deb *.rpm > SHA256SUMS && cat SHA256SUMS
 
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
         run: >
-          gh release create "${GITHUB_REF_NAME}" dist/*
+          gh release create "${GITHUB_REF_NAME}" release/*
           --title "latency-probe ${GITHUB_REF_NAME#v}"
           --notes-file docs/release-notes.md
