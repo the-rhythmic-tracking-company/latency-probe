@@ -40,6 +40,23 @@ On JACK the probe uses two clients, `latency-probe-out` → app →
 `latency-probe-in`, so the graph has no cycle and the processing order
 within a cycle is fixed.
 
+## Install (Linux)
+
+Download the package for your system from the
+[latest release](https://github.com/the-rhythmic-tracking-company/latency-probe/releases/latest)
+and install it with your package manager:
+
+```
+sudo apt install ./latency-probe_*_arm64.deb        # Raspberry Pi OS 64-bit, Debian/Ubuntu on ARM
+sudo apt install ./latency-probe_*_amd64.deb        # Debian, Ubuntu, Mint on a PC
+sudo dnf install ./latency-probe-*.x86_64.rpm       # Fedora, RHEL/Alma/Rocky 9+ on a PC
+sudo dnf install ./latency-probe-*.aarch64.rpm      # the same on ARM
+```
+
+The release page is the single source for every package; getting into the
+distributions' own repositories (apt/PPA, Fedora COPR) comes later and will
+build from it.
+
 ## Usage (Linux)
 
 ```
@@ -64,7 +81,12 @@ root.
 ```
 scripts/build-linux.sh            # amd64 + arm64 → build/linux-<arch>/latency-probe_*.deb
 scripts/build-linux.sh amd64      # one architecture (arm64 is emulated on x86 hosts)
+FORMAT=rpm scripts/build-linux.sh # .rpm instead → build/rpm-<arch>/latency-probe-*.rpm
+FORMAT=all scripts/build-linux.sh # both
 ```
+
+`.rpm` builds use `docker/Dockerfile.rpm` (AlmaLinux 9, glibc 2.34, PipeWire's
+JACK headers), so they install on RHEL/Alma/Rocky 9+ and Fedora.
 
 For each architecture the script:
 
@@ -110,6 +132,21 @@ MSYS_NO_PATHCONV=1 docker run --rm --shm-size=256m -v "$(pwd -W):/src" -w /src \
 docker run --rm --shm-size=256m -v "${PWD}:/src" -w /src latency-probe-build:amd64 bash scripts/e2e-jack.sh build/linux-amd64
 ```
 
+### Releases
+
+`.github/workflows/build.yml` builds and tests all four packages (deb/rpm ×
+amd64/arm64, natively on GitHub's x64 and ARM runners) on every push and pull
+request. To release, bump `VERSION` in `CMakeLists.txt`, commit, and push a
+matching tag:
+
+```
+git tag v0.1.1 && git push origin v0.1.1
+```
+
+The workflow refuses a tag that doesn't match the CMake version, then
+publishes a GitHub Release with the packages, `SHA256SUMS` and
+`docs/release-notes.md` as its text.
+
 ### Native build
 
 Needs CMake ≥ 3.16, a C++17 compiler, and `libjack-jackd2-dev`
@@ -123,8 +160,8 @@ cmake -S . -B build && cmake --build build && (cd build && ctest)
 
 | Target | Build |
 |---|---|
-| Linux x86-64 (Intel and AMD) | `.deb`, built on Ubuntu 22.04 (glibc 2.35) |
-| Linux ARM64 (Pi 4/5 on 64-bit Pi OS; NVIDIA Grace / DGX OS) | `.deb`, same base |
+| Linux x86-64 (Intel and AMD) | `.deb` built on Ubuntu 22.04 (glibc 2.35); `.rpm` built on AlmaLinux 9 (glibc 2.34) |
+| Linux ARM64 (Pi 4/5 on 64-bit Pi OS; NVIDIA Grace / DGX OS) | `.deb` and `.rpm`, same bases |
 | Windows x64 | ASIO driver — planned |
 | Windows ARM64, macOS universal | Later |
 

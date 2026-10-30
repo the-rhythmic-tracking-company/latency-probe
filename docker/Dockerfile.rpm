@@ -1,0 +1,16 @@
+# Build environment for the .rpm packages (dnf / yum).
+#
+# AlmaLinux 9 (glibc 2.34) on purpose: the oldest supported RPM base, so
+# binaries built here run on RHEL / Alma / Rocky 9+ and current Fedora.
+# PipeWire's JACK headers stand in for JACK's own; both provide jack.pc and
+# the same libjack.so.0 ABI.
+FROM almalinux:9
+
+RUN dnf install -y --setopt=install_weak_deps=False dnf-plugins-core \
+ && dnf config-manager --set-enabled crb \
+ && dnf install -y --setopt=install_weak_deps=False \
+      gcc-c++ make cmake pkgconf-pkg-config rpm-build file \
+      pipewire-jack-audio-connection-kit-devel \
+ && dnf clean all
+
+WORKDIR /src

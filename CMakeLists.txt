@@ -76,10 +76,15 @@ endif()
 # Packaging: .deb for amd64 / arm64. Built inside ubuntu:22.04 (glibc 2.35)
 # so one package runs on Pi OS bookworm+, Debian 12+, Ubuntu 22.04+ and DGX OS.
 # ---------------------------------------------------------------------------
+set(LATENCY_PROBE_HOMEPAGE "https://github.com/the-rhythmic-tracking-company/latency-probe")
 set(CPACK_PACKAGE_NAME "latency-probe")
 set(CPACK_PACKAGE_VENDOR "The Rhythmic Tracking Company")
-set(CPACK_PACKAGE_CONTACT "nathan@artisticnetwork.com")
+# Contact is the issue tracker, not a personal address.
+set(CPACK_PACKAGE_CONTACT "The Rhythmic Tracking Company <${LATENCY_PROBE_HOMEPAGE}/issues>")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "${PROJECT_DESCRIPTION}")
+set(CPACK_PACKAGE_DESCRIPTION
+  "Measures the real audio round trip of a remote-jam app (Jamulus, JackTrip, SonoBus, JamKazam...) by sending a quiet sweep through the app and timing its return. Used by the SyncTrack Stage Bridge browser extension.")
+set(CPACK_PACKAGE_HOMEPAGE_URL "${LATENCY_PROBE_HOMEPAGE}")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
 set(CPACK_DEBIAN_PACKAGE_SECTION "sound")
 set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
@@ -88,4 +93,13 @@ set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
 # libjack is substituted at load time, so this resolves either way.
 set(CPACK_DEBIAN_PACKAGE_DEPENDS
   "libc6 (>= 2.35), libstdc++6 (>= 11), libjack-jackd2-0 | libjack-0.125")
+
+# .rpm (dnf/yum): built inside almalinux:9 (glibc 2.34), so it installs on
+# RHEL/Alma/Rocky 9+ and Fedora. Requirements come from rpmbuild's automatic
+# library scan: libjack.so.0 is provided by either jack-audio-connection-kit
+# or pipewire-jack-audio-connection-kit-libs, so both setups qualify.
+set(CPACK_RPM_PACKAGE_LICENSE "GPL-3.0-only")
+set(CPACK_RPM_PACKAGE_GROUP "Applications/Multimedia")
+set(CPACK_RPM_PACKAGE_URL "${LATENCY_PROBE_HOMEPAGE}")
+set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
 include(CPack)
