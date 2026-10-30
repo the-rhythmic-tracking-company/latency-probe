@@ -6,11 +6,18 @@
 # the same libjack.so.0 ABI.
 FROM almalinux:9
 
-RUN dnf install -y --setopt=install_weak_deps=False dnf-plugins-core \
- && dnf config-manager --set-enabled crb \
- && dnf install -y --setopt=install_weak_deps=False \
-      gcc-c++ make cmake pkgconf-pkg-config rpm-build file \
-      pipewire-jack-audio-connection-kit-devel \
+# AlmaLinux mirrors occasionally serve an empty repomd.xml mid-sync, which
+# fails dnf outright; retry the whole install a few times before giving up.
+RUN for attempt in 1 2 3 4 5; do \
+      dnf install -y --setopt=install_weak_deps=False --setopt=retries=10 dnf-plugins-core \
+      && dnf config-manager --set-enabled crb \
+      && dnf install -y --setopt=install_weak_deps=False --setopt=retries=10 \
+           gcc-c++ make cmake pkgconf-pkg-config rpm-build file \
+           pipewire-jack-audio-connection-kit-devel \
+      && break; \
+      echo "dnf failed (attempt ${attempt}), retrying in 15 s"; dnf clean all; sleep 15; \
+    done \
+ && rpm -q pipewire-jack-audio-connection-kit-devel \
  && dnf clean all
 
 WORKDIR /src
